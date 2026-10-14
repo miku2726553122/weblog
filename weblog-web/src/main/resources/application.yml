@@ -1,0 +1,45 @@
+spring:
+  profiles:
+    # 默认激活 dev 环境
+    active: dev
+  servlet:
+    multipart:
+      # 单文件最大大小
+      max-file-size: 10MB
+      # 单次请求最大大小
+      max-request-size: 20MB
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://127.0.0.1:3306/weblog?useUnicode=true&characterEncoding=UTF-8&autoReconnect=true&useSSL=false&zeroDateTimeBehavior=convertToNull
+    username: root
+    password: 123456
+    hikari:
+      minimum-idle: 5
+      maximum-pool-size: 20
+      auto-commit: true
+      idle-timeout: 30000
+      pool-name: Weblog-HikariCP
+      max-lifetime: 1800000
+      connection-timeout: 30000
+      connection-test-query: SELECT 1
+  security:
+    user:
+      name: admin # 登录用户名
+      password: 123456 # 登录密码
+
+logging:
+  # Spring Boot 默认只识别 logback-spring.xml / logback.xml，自定义文件名必须显式指定
+  config: classpath:logback-weblog.xml
+jwt:
+  # 签发人
+  issuer: weblog
+  # 秘钥
+  secret: jElxcSUj38+Bnh73T68lNs0DfBSit6U3whQlcGO2XwnI+Bo3g4xsiCIPg8PV/L0fQMis08iupNwhe2PzYLB9Xg==
+  # token 过期时间（单位：分钟） 24*60
+  tokenExpireTime: 1440
+  # token 请求头中的 key 值
+  tokenHeaderKey: Authorization
+  # token 请求头中的 value 值前缀
+  tokenPrefix: Bearer
+
+
