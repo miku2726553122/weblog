@@ -1,6 +1,7 @@
 package com.example.weblog.admin.event.subscriber;
 
 import com.example.weblog.admin.event.PublishArticleEvent;
+import com.example.weblog.admin.service.AdminStatisticsService;
 import com.example.weblog.common.constant.Constants;
 import com.example.weblog.common.domain.dos.ArticleContentDO;
 import com.example.weblog.common.domain.dos.ArticleDO;
@@ -28,6 +29,9 @@ public class PublishArticleSubscriber {
     private ArticleMapper articleMapper;
     @Autowired
     private ArticleContentMapper articleContentMapper;
+    @Autowired
+    private AdminStatisticsService statisticsService;
+
 
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void onApplicationEvent(PublishArticleEvent event) {
@@ -55,5 +59,13 @@ public class PublishArticleSubscriber {
         long count = luceneHelper.addDocument(ArticleIndex.NAME, document);
 
         log.info("==> 添加文章对应 Lucene 文档结束，articleId: {}，受影响行数: {}", articleId, count);
+
+        // 重新统计各分类下文章总数
+        statisticsService.statisticsCategoryArticleTotal();
+        log.info("==> 重新统计各分类下文章总数");
+
+        // 重新统计各标签下文章总数
+        statisticsService.statisticsTagArticleTotal();
+        log.info("==> 重新统计各标签下文章总数");
     }
 }

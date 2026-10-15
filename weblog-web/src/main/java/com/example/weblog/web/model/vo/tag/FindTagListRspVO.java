@@ -9,5 +9,6 @@ import lombok.*;
 public class FindTagListRspVO {
     private Long id;
     private String name;
+    private Integer articlesTotal;
 }
 
