@@ -60,7 +60,7 @@
         <p6spy.version>3.9.1</p6spy.version>
         <jjwt.version>0.11.2</jjwt.version>
         <minio.version>8.2.1</minio.version>
-        <mapstruct.version>1.5.5.Final</mapstruct.version>
+        <mapstruct.version>1.6.0</mapstruct.version>
         <commonmark.version>0.20.0</commonmark.version>
         <lucene.version>8.11.1</lucene.version>
         <commons-io.version>2.11.0</commons-io.version>
