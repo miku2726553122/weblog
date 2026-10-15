@@ -1,6 +1,7 @@
 package com.example.weblog.admin.event.subscriber;
 
 import com.example.weblog.admin.event.DeleteArticleEvent;
+import com.example.weblog.admin.service.AdminStatisticsService;
 import com.example.weblog.search.LuceneHelper;
 import com.example.weblog.search.index.ArticleIndex;
 import lombok.extern.slf4j.Slf4j;
@@ -17,6 +18,9 @@ public class DeleteArticleSubscriber {
     @Autowired
     private LuceneHelper luceneHelper;
 
+    @Autowired
+    private AdminStatisticsService statisticsService;
+
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void onApplicationEvent(DeleteArticleEvent event) {
         Long articleId = event.getArticleId();
@@ -31,5 +35,9 @@ public class DeleteArticleSubscriber {
         long count = luceneHelper.deleteDocument(ArticleIndex.NAME, condition);
 
         log.info("==> 删除文章对应 Lucene 文档结束，articleId: {}，受影响行数: {}", articleId, count);
+
+        // 重新统计各分类下文章总数
+        statisticsService.statisticsCategoryArticleTotal();
+        log.info("==> 重新统计各分类下文章总数");
     }
 }
