@@ -101,6 +101,12 @@
             <groupId>io.github.toolgood</groupId>
             <artifactId>toolgood-words</artifactId>
         </dependency>
+        <!-- 添加 WebSocket 支持  -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-websocket</artifactId>
+        </dependency>
+
 
     </dependencies>
 

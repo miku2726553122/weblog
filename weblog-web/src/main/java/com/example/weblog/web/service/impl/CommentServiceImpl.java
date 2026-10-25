@@ -14,19 +14,17 @@ import com.example.weblog.web.event.PublishCommentEvent;
 import com.example.weblog.web.model.vo.comment.*;
 import com.example.weblog.web.service.CommentService;
 import com.example.weblog.web.utils.StringUtil;
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationEventPublisher;
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
 import toolgood.words.IllegalWordsSearch;
 import toolgood.words.IllegalWordsSearchResult;
 
+import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -46,9 +44,6 @@ public class CommentServiceImpl implements CommentService {
     @Autowired
     private ApplicationEventPublisher eventPublisher;
 
-    @Value("${api-key}")
-    private String apiKey;
-
     @Override
     public Response findQQUserInfo(FindQQUserInfoReqVO findQQUserInfoReqVO) {
         String qq = findQQUserInfoReqVO.getQq();
@@ -59,33 +54,41 @@ public class CommentServiceImpl implements CommentService {
             throw new BizException(ResponseCodeEnum.NOT_QQ_NUMBER);
         }
 
-        //请求第三方接口
-        String url = String.format("http://api.guiguiya.com/api/qq_info?qq=%s&apiKey=%s", qq, apiKey);
-        String result = restTemplate.getForObject(url, String.class);
+        // 头像地址（腾讯官方 QQ 头像 CDN）
+        String avatar = String.format("http://q1.qlogo.cn/g?b=qq&nk=%s&s=640", qq);
+        // 邮箱
+        String mail = qq.trim() + "@qq.com";
 
-        log.info("==> 请求第三方接口，获取QQ用户信息，结果: {}", result);
-
-        //解析响参
-        ObjectMapper objectMapper = new ObjectMapper();
+        // 请求腾讯官方接口获取 QQ 昵称
+        String nickname = qq; // 默认使用 QQ 号作为昵称
         try {
-            Map<String, Object> map = objectMapper.readValue(result, Map.class);
-            if (Objects.equals(map.get("code"), HttpStatus.OK.value())) {
-                // 获取响应参数中 data 节点下的数据
-                Map<String, Object> data = (Map<String, Object>) map.get("data");
+            String url = String.format("https://users.qzone.qq.com/fcg-bin/cgi_get_portrait.fcg?uins=%s", qq);
+            // 该接口返回 GBK 编码的 JSONP，需要以字节数组接收后手动转码
+            byte[] bytes = restTemplate.getForObject(url, byte[].class);
+            String result = new String(bytes, StandardCharsets.UTF_8);
+            log.info("==> 请求腾讯官方接口获取QQ用户信息，结果: {}", result);
 
-                if (!CollectionUtils.isEmpty(data)) {
-                    // 获取用户头像、昵称、邮箱
-                    return Response.success(FindQQUserInfoRspVO.builder()
-                            .avatar(String.valueOf(data.get("avatar_apiurl_1")))
-                            .nickname(String.valueOf(data.get("name")))
-                            .mail(qq.trim() + "@qq.com") // 组合邮箱地址
-                            .build());
+            // 解析 JSONP 响应：portraitCallBack({"qq号":[...,"昵称",...]})
+            int jsonStart = result.indexOf('(');
+            int jsonEnd = result.lastIndexOf(')');
+            if (jsonStart != -1 && jsonEnd != -1 && jsonEnd > jsonStart) {
+                String jsonStr = result.substring(jsonStart + 1, jsonEnd);
+                ObjectMapper objectMapper = new ObjectMapper();
+                Map<String, Object> root = objectMapper.readValue(jsonStr, Map.class);
+                List<Object> qqData = (List<Object>) root.get(qq);
+                if (qqData != null && qqData.size() > 6) {
+                    nickname = String.valueOf(qqData.get(6));
                 }
             }
-            return Response.fail();
-        } catch (JsonProcessingException e) {
-            throw new RuntimeException(e);
+        } catch (Exception e) {
+            log.warn("获取 QQ 用户信息失败，将使用 QQ 号作为昵称: {}", e.getMessage());
         }
+
+        return Response.success(FindQQUserInfoRspVO.builder()
+                .avatar(avatar)
+                .nickname(nickname)
+                .mail(mail)
+                .build());
     }
 
     /**
@@ -163,12 +166,12 @@ public class CommentServiceImpl implements CommentService {
         // 发送评论发布事件
         eventPublisher.publishEvent(new PublishCommentEvent(this, commentId));
 
-        // 给予前端对应的提示信息
+        // 根据评论状态返回对应提示信息（不抛异常，否则事务会回滚，评论无法存入数据库）
         if (isContainSensitiveWord)
-            throw new BizException(ResponseCodeEnum.COMMENT_CONTAIN_SENSITIVE_WORD);
+            return Response.fail(ResponseCodeEnum.COMMENT_CONTAIN_SENSITIVE_WORD);
 
         if (Objects.equals(status, CommentStatusEnum.WAIT_EXAMINE.getCode()))
-            throw new BizException(ResponseCodeEnum.COMMENT_WAIT_EXAMINE);
+            return Response.fail(ResponseCodeEnum.COMMENT_WAIT_EXAMINE);
 
         return Response.success();
     }
