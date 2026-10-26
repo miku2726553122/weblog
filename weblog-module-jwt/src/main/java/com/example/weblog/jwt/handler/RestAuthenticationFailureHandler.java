@@ -2,6 +2,7 @@ package com.example.weblog.jwt.handler;
 
 import com.example.weblog.common.enums.ResponseCodeEnum;
 import com.example.weblog.common.utils.Response;
+import com.example.weblog.jwt.exception.CaptchaVerificationFailedException;
 import com.example.weblog.jwt.exception.UsernameOrPasswordNullException;
 import com.example.weblog.jwt.utils.ResultUtil;
 import lombok.extern.slf4j.Slf4j;
@@ -29,6 +30,9 @@ public class RestAuthenticationFailureHandler implements AuthenticationFailureHa
             // 用户名或密码错误
             ResultUtil.fail(response, Response.fail(ResponseCodeEnum.USERNAME_OR_PWD_ERROR));
             return;
+        }else if (exception instanceof CaptchaVerificationFailedException) {
+            // 行为验证码错误
+            ResultUtil.fail(response, Response.fail(exception.getMessage()));
         }
 
         // 登录失败

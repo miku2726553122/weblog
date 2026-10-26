@@ -49,3 +49,14 @@ jwt:
   # token 请求头中的 value 值前缀
   tokenPrefix: Bearer
 
+# 行为验证码
+captcha:
+  expire: # 验证码过期时间，默认是 2分钟,单位毫秒， 可以根据自身业务进行调整
+    default: 10000 # 默认缓存时间 2分钟
+    WORD_IMAGE_CLICK: 20000 # 针对 点选验证码 过期时间设置为 2分钟， 因为点选验证码验证比较慢，把过期时间调整大一些
+  secondary:
+    enabled: true # 二次验证， 默认 false 不开启
+  # 初始化默认模板资源（滑块形状等），非常重要！
+  init-default-resource: true
+  local-cache-enabled: true
+  local-cache-size: 20

@@ -8,6 +8,7 @@ import com.example.weblog.common.utils.Response;
 import com.example.weblog.web.enums.ChatRoomMessageTypeEnum;
 import com.example.weblog.web.model.vo.chatroom.*;
 import com.example.weblog.web.service.ChatRoomService;
+import com.example.weblog.web.utils.DateTimeFormatUtil;
 import com.example.weblog.web.websocket.ChatWebSocketServer;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -71,7 +72,7 @@ public class ChatRoomServiceImpl implements ChatRoomService {
                         .nickname(chatMessageDO.getNickname())
                         .avatar(chatMessageDO.getAvatar())
                         .content(chatMessageDO.getContent())
-                        .time(chatMessageDO.getCreateTime().format(ChatWebSocketServer.TIME_FORMATTER))
+                        .time(DateTimeFormatUtil.formatChatTime(chatMessageDO.getCreateTime()))
                         .isSelf(isSelf)
                         .build();
             }).collect(Collectors.toList());

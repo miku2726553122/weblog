@@ -1,6 +1,9 @@
 package com.example.weblog.jwt.filter;
 
+import cloud.tianai.captcha.application.ImageCaptchaApplication;
+import cloud.tianai.captcha.spring.plugins.secondary.SecondaryVerificationApplication;
 import com.baomidou.mybatisplus.core.toolkit.StringUtils;
+import com.example.weblog.jwt.exception.CaptchaVerificationFailedException;
 import com.example.weblog.jwt.exception.UsernameOrPasswordNullException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -18,6 +21,18 @@ import java.util.Objects;
 
 public class JwtAuthenticationFilter extends AbstractAuthenticationProcessingFilter {
 
+    /**
+     * 验证码校验器
+     */
+    private ImageCaptchaApplication imageCaptchaApplication;
+
+    /**
+     * 设置验证码校验器
+     */
+    public void setImageCaptchaApplication(ImageCaptchaApplication imageCaptchaApplication) {
+        this.imageCaptchaApplication = imageCaptchaApplication;
+    }
+
 
     /**
      * 指定用户登录的访问地址
@@ -33,11 +48,31 @@ public class JwtAuthenticationFilter extends AbstractAuthenticationProcessingFil
         JsonNode jsonNode = mapper.readTree(request.getInputStream());
         JsonNode usernameNode = jsonNode.get("username");
         JsonNode passwordNode =  jsonNode.get("password");
+        JsonNode captchaIdNode = jsonNode.get("captchaId");
+
 
         // 判断用户名、密码是否为空
         if (Objects.isNull(usernameNode) || Objects.isNull(passwordNode)
                 || StringUtils.isBlank(usernameNode.textValue()) || StringUtils.isBlank(passwordNode.textValue())) {
             throw new UsernameOrPasswordNullException("用户名或密码不能为空");
+        }
+
+        // 二次校验验证码
+        if (Objects.nonNull(imageCaptchaApplication)) {
+            // 验证码 ID
+            String captchaId = captchaIdNode != null ? captchaIdNode.textValue() : null;
+            if (StringUtils.isBlank(captchaId)) {
+                throw new CaptchaVerificationFailedException("验证码 ID 不能为空");
+            }
+
+            // 执行二次校验
+            boolean verified = false;
+            if (imageCaptchaApplication instanceof SecondaryVerificationApplication) {
+                verified = ((SecondaryVerificationApplication) imageCaptchaApplication).secondaryVerification(captchaId);
+            }
+            if (!verified) {
+                throw new CaptchaVerificationFailedException("验证码校验失败，请重新验证");
+            }
         }
 
         String username = usernameNode.textValue();
